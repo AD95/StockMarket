@@ -7,7 +7,7 @@ android {
     buildToolsVersion "30.0.2"
 
     defaultConfig {
-        applicationId "com.ad95.hw9"
+        applicationId "com.ad95.stocks"
         minSdkVersion 26
         targetSdkVersion 30
         versionCode 1

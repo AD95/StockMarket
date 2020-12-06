@@ -27,6 +27,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonArrayRequest;
@@ -37,8 +38,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class Details extends AppCompatActivity {
 
@@ -347,28 +352,28 @@ public class Details extends AppCompatActivity {
     }
 
     void fetchDetails(String query, NewsRecyclerViewAdapter sectionAdapter, ArrayList<News> newsArrayList) {
-        String url = "http://androidassignment-env.eba-eg36rp6m.us-east-1.elasticbeanstalk.com/api/details?value=" + query;
+        String url = "https://api.tiingo.com/tiingo/daily/" + query + "?token=b4e95182bcfae3fa31c6d095f26de94e3514a17b";
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
                 (Request.Method.GET, url, null, response -> {
-//                    Log.d("Response: " , response.toString());
                     try {
                         ((TextView) findViewById(R.id.ticker)).setText(response.getString("ticker"));
                         company = response.getString("name");
                         ((TextView) findViewById(R.id.company)).setText(response.getString("name"));
-                        ((TextView) findViewById(R.id.description)).setText(response.getString("description"));
-                        ((TextView) findViewById(R.id.description)).getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                        ((TextView) findViewById(R.id.description)).getViewTreeObserver().addOnGlobalLayoutListener((ViewTreeObserver.OnGlobalLayoutListener) new ViewTreeObserver.OnGlobalLayoutListener() {
                             @Override
                             public void onGlobalLayout() {
-                                if (((TextView) findViewById(R.id.description)).getLineCount() <= 2) {
-                                    findViewById(R.id.show_more).setVisibility(View.GONE);
-                                } else {
-                                    ((TextView) findViewById(R.id.description)).setMaxLines(2);
+                                if (((TextView) Details.this.findViewById(R.id.description)).getLineCount() > 2) {
+                                    ((TextView) Details.this.findViewById(R.id.description)).setMaxLines(2);
+                                    Details.this.findViewById(R.id.show_more).setVisibility(View.VISIBLE);
+                                    ((TextView) Details.this.findViewById(R.id.description)).getViewTreeObserver().removeOnGlobalLayoutListener(this);
                                 }
-                                ((TextView) findViewById(R.id.description)).getViewTreeObserver().removeOnGlobalLayoutListener(this);
                             }
                         });
+                        ((TextView) findViewById(R.id.description)).setText(response.getString("description"));
                     } catch (JSONException e) {
                         e.printStackTrace();
+                        Toast.makeText(this, "Stock does not exist", Toast.LENGTH_SHORT).show();
+                        finish();
                     } finally {
                         num_requests_done++;
                         if (num_requests_done == total_requests) {
@@ -379,7 +384,8 @@ public class Details extends AppCompatActivity {
                     }
 
                 }, error -> {
-                    // TODO: Handle error
+                    Toast.makeText(this, "Stock does not exist", Toast.LENGTH_SHORT).show();
+                    finish();
                     Log.d("Response: ", error.toString());
                     num_requests_done++;
                     if (num_requests_done == total_requests) {
@@ -388,10 +394,9 @@ public class Details extends AppCompatActivity {
                         invalidateOptionsMenu();
                     }
                 });
-        url = "http://androidassignment-env.eba-eg36rp6m.us-east-1.elasticbeanstalk.com/api/iex?value=" + query;
+        url = "https://api.tiingo.com/iex?tickers=" + query + "&token=b4e95182bcfae3fa31c6d095f26de94e3514a17b";
         JsonArrayRequest jsonArrayRequest1 = new JsonArrayRequest
                 (Request.Method.GET, url, null, response -> {
-//                    Log.d("Response: " , response.toString());
 //[{"timestamp":"2020-11-25T21:00:00+00:00","bidSize":null,"lastSaleTimestamp":"2020-11-25T21:00:00+00:00","low":3140.26,"bidPrice":null,"prevClose":3118.06,"quoteTimestamp":"2020-11-25T21:00:00+00:00","last":3185.07,"askSize":null,"volume":3790403,"lastSize":null,"ticker":"AMZN","high":3198,"mid":null,"askPrice":null,"open":3141.87,"tngoLast":3185.07}]
                     try {
                         JSONObject response1 = response.getJSONObject(0);
@@ -467,7 +472,6 @@ public class Details extends AppCompatActivity {
                     }
 
                 }, error -> {
-                    // TODO: Handle error
                     Log.d("Response: ", error.toString());
                     num_requests_done++;
                     if (num_requests_done == total_requests) {
@@ -483,11 +487,10 @@ public class Details extends AppCompatActivity {
     }
 
     void fetchNews(String query, NewsRecyclerViewAdapter sectionAdapter, ArrayList<News> newsArrayList) {
-        String url = "http://androidassignment-env.eba-eg36rp6m.us-east-1.elasticbeanstalk.com/api/news?value=" + query;
+        String url = "http://newsapi.org/v2/everything?apiKey=f3346f1e651545cb8b4d2a1320357fd4&q=" + query;
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
                 (Request.Method.GET, url, null, response -> {
-//                    Log.d("Response: " , response.toString());
                     try {
                         JSONArray jsonArray = response.getJSONArray("articles");
                         ArrayList<News> arrayList = new ArrayList<>();
@@ -519,15 +522,21 @@ public class Details extends AppCompatActivity {
                         }
                     }
                 }, error -> {
-                    // TODO: Handle error
-                    Log.d("Response: ", error.toString());
+                    error.printStackTrace();
                     num_requests_done++;
                     if (num_requests_done == total_requests) {
                         findViewById(R.id.progress).setVisibility(View.GONE);
                         findViewById(R.id.scrollview).setVisibility(View.VISIBLE);
                         invalidateOptionsMenu();
                     }
-                });
+                }){
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String>  params = new HashMap<String, String>();
+                params.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36");
+                return params;
+            }
+        };
 
         queue.add(jsonObjectRequest);
 
@@ -535,11 +544,20 @@ public class Details extends AppCompatActivity {
     }
 
     void fetchChart(String query) {
-        String url = "http://androidassignment-env.eba-eg36rp6m.us-east-1.elasticbeanstalk.com/api/chart1?value=" + query;
+        Date d = new Date();
+        int year = d.getYear();
+        int month = d.getMonth();
+        int day = d.getDate();
+
+        Date fulldate = new Date(year - 2, month, day);
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        String toDate = dateFormat.format(fulldate);
+
+        String url = "https://api.tiingo.com/tiingo/daily/" + query + "/prices?startDate=" + toDate + "&columns=open,high,low,close,volume&resampleFreq=daily&token=b4e95182bcfae3fa31c6d095f26de94e3514a17b";
 
         JsonArrayRequest jsonArrayRequest = new JsonArrayRequest
                 (Request.Method.GET, url, null, response -> {
-//                    Log.d("Response: " , response.toString());
                     WebView webview;
                     webview = findViewById(R.id.chart_view);
                     WebSettings settings = webview.getSettings();
@@ -550,7 +568,6 @@ public class Details extends AppCompatActivity {
                     webview.loadUrl("file:///android_asset/chart.html");
                     webview.setBackgroundColor(Color.parseColor("#FBF9FC"));
                 }, error -> {
-                    // TODO: Handle error
                     Log.d("Response: ", error.toString());
                 });
 

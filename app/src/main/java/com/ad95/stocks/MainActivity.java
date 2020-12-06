@@ -16,7 +16,6 @@ import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
@@ -73,7 +72,6 @@ public class MainActivity extends AppCompatActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         if (hasFocus)
             init();
-//        Log.d("abc", "abc");
         super.onWindowFocusChanged(hasFocus);
     }
 
@@ -92,12 +90,6 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView favRecyclerView = findViewById(R.id.recyclerview1);
         favRecyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
         favRecyclerView.setAdapter(favSectionAdapter);
-
-//        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(portRecyclerView.getContext(),
-//                DividerItemDecoration.VERTICAL);
-//        dividerItemDecoration.setDrawable(ContextCompat.getDrawable(this, R.drawable.cursor));
-//        portRecyclerView.addItemDecoration(dividerItemDecoration);
-//        favRecyclerView.addItemDecoration(dividerItemDecoration);
 
         CustomDividerItemDecorator dividerItemDecoration1 = new CustomDividerItemDecorator(ContextCompat.getDrawable(this, R.drawable.cursor));
         portRecyclerView.addItemDecoration(dividerItemDecoration1);
@@ -209,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
 
         JSONObject jsonObject = new JSONObject();
 
-        String url = "http://androidassignment-env.eba-eg36rp6m.us-east-1.elasticbeanstalk.com/api/iex?value=" + tickConcat.toString();
+        String url = "https://api.tiingo.com/iex?tickers=" + tickConcat.toString() + "&token=b4e95182bcfae3fa31c6d095f26de94e3514a17b";
         JSONObject finalPortfolio = portfolio;
         JsonArrayRequest jsonArrayRequest1 = new JsonArrayRequest
                 (Request.Method.GET, url, null, response -> {
@@ -278,7 +270,6 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                 }, error -> {
-                    // TODO: Handle error
                     Log.d("Response: ", error.toString());
                     findViewById(R.id.progress).setVisibility(View.GONE);
                     findViewById(R.id.scrollview).setVisibility(View.VISIBLE);
@@ -286,7 +277,7 @@ public class MainActivity extends AppCompatActivity {
 
         queue.add(jsonArrayRequest1);
 
-        handler.postDelayed(() -> fetchDetails(stocks, favStocks, portSectionAdapter, favSectionAdapter), 15000);
+//        handler.postDelayed(() -> fetchDetails(stocks, favStocks, portSectionAdapter, favSectionAdapter), 15000);
 
     }
 
@@ -296,6 +287,12 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.main, menu);
 
         MenuItem menuItem = menu.findItem(R.id.searchview);
+
+        MenuItem menuItem1 = menu.findItem(R.id.refresh);
+        menuItem1.setOnMenuItemClickListener(item -> {
+            init();
+            return true;
+        });
 
         menuItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
             @Override
@@ -320,47 +317,28 @@ public class MainActivity extends AppCompatActivity {
         ArrayAdapter<String> newsAdapter = new ArrayAdapter<>(getApplicationContext(), android.R.layout.simple_dropdown_item_1line, new ArrayList<>());
         searchAutoComplete.setAdapter(newsAdapter);
 
-        final boolean[] done = {false};
-
         searchAutoComplete.setOnItemClickListener((parent, view, position, id) -> {
-            searchView.setQuery(newsAdapter.getItem(position), false);
-            done[0] = true;
-//            searchView.clearFocus();
-        });
-
-        searchView.setOnQueryTextFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus && done[0])
-                done[0] = !done[0];
+            searchView.setQuery(newsAdapter.getItem(position), true);
         });
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                if (!done[0])
+                if (!query.contains("-"))
                     return false;
-//                Toast.makeText(MainActivity.this, "Submitted " + query.split("-")[0].trim(), Toast.LENGTH_SHORT).show();
 
-                if(done[0]) {
-                    startActivityForResult(new Intent(getApplicationContext(), Details.class).putExtra("tick", query.split("-")[0].trim()), 100);
-                    done[0] = false;
-                }
+                startActivityForResult(new Intent(getApplicationContext(), Details.class).putExtra("tick", query.split("-")[0].trim()), 100);
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-//                Log.d("abc", newText);
                 if (newText.length() < 3) {
-//                    dataArr.clear();
                     newsAdapter.clear();
-//                    newsAdapter.addAll(dataArr);
                     newsAdapter.notifyDataSetChanged();
                     searchAutoComplete.callOnClick();
-                } else if (!done[0]) {
+                } else
                     runSearch(newText, newsAdapter, searchAutoComplete);
-                } else {
-                    done[0] = false;
-                }
                 return true;
             }
         });
@@ -369,12 +347,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void runSearch(String query, ArrayAdapter<String> newsAdapter, SearchView.SearchAutoComplete searchAutoComplete) {
-        String url = "http://androidassignment-env.eba-eg36rp6m.us-east-1.elasticbeanstalk.com/api/search?value=" + query;
+        String url = "https://api.tiingo.com/tiingo/utilities/search?token=b4e95182bcfae3fa31c6d095f26de94e3514a17b&query=" + query;
 
         JsonArrayRequest jsonArrayRequest = new JsonArrayRequest
                 (Request.Method.GET, url, null, response -> {
-//                    Log.d("Response: " , response.toString());
-//                    dataArr.clear();
                     ArrayList<String> newArr = new ArrayList<>();
                     for (int i = 0; i < response.length(); i++) {
                         try {
@@ -386,26 +362,14 @@ public class MainActivity extends AppCompatActivity {
                             e.printStackTrace();
                         }
                     }
-//                    newsAdapter.clear();
                     newsAdapter.addAll(newArr);
                     newsAdapter.notifyDataSetChanged();
-//                    newsAdapter.getFilter().filter(null);
-//                    searchAutoComplete.showDropDown();
                     searchAutoComplete.callOnClick();
                 }, error -> {
-                    // TODO: Handle error
                     Log.d("Response: ", error.toString());
                 });
 
         queue.add(jsonArrayRequest);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-//        if(requestCode == 200){
-//            init();
-//        }
-        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -452,20 +416,4 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
-
-//    @Override
-//    public boolean onOptionsItemSelected(MenuItem item) {
-//        int id = item.getItemId();
-//
-//        Log.d("abc", item.toString());
-////        if (id == android.R.id.home) {
-////            onBackPressed();
-////            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
-////            return true;
-////        }
-//
-//        return super.onOptionsItemSelected(item);
-//    }
-
 }
